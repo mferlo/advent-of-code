@@ -9,7 +9,7 @@
 
 ; 1b
 (defn stop-at-basement [acc index cur]
-  (if (< acc 0)
+  (if (neg? acc)
     (reduced index)
     (+ acc (toInt cur))))
 
