@@ -63,3 +63,35 @@
      rest
      clojure.string/join
      println)
+
+; graphical variant
+(def keypad-2-graphical
+  (str "#######"
+       "###1###"
+       "##234##"
+       "#56789#"
+       "##ABC##"
+       "###D###"
+       "#######"))
+
+(defn index-offset [direction]
+  (case direction
+    \U -7
+    \D 7
+    \L -1
+    \R 1))
+
+(defn move-keypad-2-graphical [digit direction]
+  (let [i (clojure.string/index-of keypad-2-graphical digit)
+        c (nth keypad-2-graphical (+ i (index-offset direction)))]
+    (if (= \# c) digit c)))
+
+(defn dial-2-graphical [prev s]
+  (reduce move-keypad-2-graphical prev (seq s)))
+
+(->> (slurp "input.txt")
+     clojure.string/split-lines
+     (reductions dial-2-graphical \5)
+     rest
+     clojure.string/join
+     println)
