@@ -1,11 +1,8 @@
-(def r #".*-x(\d+)-y(\d+)\s+\d+T\s+(\d+)T\s+(\d+)T.*")
+(def r #"^/dev/grid/node-x(\d+)-y(\d+)\s+\d+T\s+(\d+)T\s+(\d+)T\s+\d+%$")
 
 (defn parse-line [line]
-  (let [[_ x y used avail] (re-matches r line)]
-    { :x (Long/parseLong x)
-      :y (Long/parseLong y)
-      :used (Long/parseLong used)
-      :avail (Long/parseLong avail) }))
+  (let [[x y used avail] (map #(Long/parseLong %) (rest (re-matches r line)))]
+    { :x x :y y :used used :avail avail }))
 
 (defn parse [filename]
   (->> (slurp filename)
@@ -14,17 +11,17 @@
        rest ; df header
        (map parse-line)))
 
-(defn viable-pair? [a b]
-  (and (pos? (:used a))
-       (and (not= (:x a) (:x b)) (not= (:y a) (:y b)))
-       (<= (:used a) (:avail b))))
+(defn has-data? [a] (pos? (:used a)))
+(defn not-same? [a b] (not (and (= (:x a) (:x b)) (= (:y a) (:y b)))))
+(defn has-space? [a b] (<= (:used a) (:avail b)))
+
+(defn viable-pair? [a b] (and (has-data? a) (not-same? a b) (has-space? a b)))
 
 (defn viable-pairs [nodes node]
   (filter (partial viable-pair? node) nodes))
 
-(defn count-viable-pairs [nodes]
-  (count (map (partial viable-pairs nodes) nodes)))
-
 (let [nodes (vec (parse "input.txt"))]
-  (println (first nodes) (last nodes))
-  (println (count-viable-pairs nodes)))
+  (->> (map (partial viable-pairs nodes) nodes)
+       flatten
+       count
+       println))
