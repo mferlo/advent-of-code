@@ -1,3 +1,5 @@
+'use strict';
+
 const molecule = "CRnCaCaCaSiRnBPTiMgArSiRnSiRnMgArSiRnCaFArTiTiBSiThFYCaFArCaCaSiThCaPBSiThSiThCaCaPTiRnPBSiThRnFArArCaCaSiThCaSiThSiRnMgArCaPTiBPRnFArSiThCaSiRnFArBCaSiRnCaPRnFArPMgYCaFArCaPTiTiTiBPBSiThCaPTiBPBSiRnFArBPBSiRnCaFArBPRnSiRnFArRnSiRnBFArCaFArCaCaCaSiThSiThCaCaPBPTiTiRnFArCaPTiBSiAlArPBCaCaCaCaCaSiRnMgArCaSiThFArThCaSiThCaSiRnCaFYCaSiRnFYFArFArCaSiRnFYFArCaSiRnBPMgArSiThPRnFArCaSiRnFArTiRnSiRnFYFArCaSiRnBFArCaSiRnTiMgArSiThCaSiThCaFArPRnFArSiRnFArTiTiTiTiBCaCaSiRnCaCaFYFArSiThCaPTiBPTiBCaSiThSiRnMgArCaF";
 
 const data = [
@@ -54,11 +56,7 @@ const replaceEach = (s, re, replacement) => {
   let m;
   while (m = re.exec(s)) {
     const result = replace(s, m.index, re.source.length, replacement);
-    console.log(`${re.source} matched ${s} at ${m.index} (${replacement}): ${result}`);
     results.push(result);
-  }
-  if (results.length) {
-    console.log("Results: " + JSON.stringify(results, null, 2));
   }
   return results;
 };
@@ -69,26 +67,31 @@ const applyAllReplacements = input => {
   const results = new Set();
   for (const d of data) {
     const re = new RegExp(d.target, "g");
-    replaceEach(input, re, d.replacement).forEach(s => results.add(s));
-    console.log(str(results));
+    const replacements = replaceEach(input, re, d.replacement);
+    replacements.forEach(r => results.add(r));
   }
-  console.log(str(results));
-  return results;
+  return Array.from(results);
 };
 
 const part1 = () => console.log(applyAllReplacements(molecule).size);
 
+// ... yeah OK, this ain't gonna work. Need to come up with an actual algorithm here.
 const part2 = () => {
   let input = [ "e" ];
   let i = 0;
   while (true) {
     i++;
-    console.log("INPUT: " + str(input));
-    const a = applyAllReplacements(input);
-    console.log(str(a));
-    break;
+    const replacements = input.map(applyAllReplacements).reduce((arr, x) => arr.concat(x), []);
+    const distinct = new Set(replacements);
+    console.log(i + " " + distinct.size);
+    if (distinct.has(molecule)) {
+      console.log(i);
+      break;
+    }
+    input = Array.from(distinct).filter(p => p.length <= molecule.length);
   }
 }
 
-// part1();
+
+//part1();
 part2();
