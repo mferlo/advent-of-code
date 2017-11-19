@@ -1,56 +1,42 @@
-const weights = [ 1, 2, 3, 4, 5, 7, 8, 9, 10, 11 ];
+const testWeights = [ 1,2,3,4,5,7,8,9,10,11 ].sort((a, b) => b - a);
+const realWeights = [ 1, 2, 3, 7, 11, 13, 17, 19, 23, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113 ].sort((a, b) => b - a);
 
-//[ 1, 2, 3, 7, 11, 13, 17, 19, 23, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113 ];
+const inputWeights = realWeights;
 
-const balancedWeight = weights.reduce((s, w) => s + w, 0) / 3;
+//const balancedWeight = inputWeights.reduce((s, w) => s + w, 0) / 3;
+const balancedWeight = inputWeights.reduce((s, w) => s + w, 0) / 4;
 
-function* generateAllCombos() {
-  for (let i = 0; i < Math.pow(3, weights.length); i++) {
-    yield i.toString(3).padStart(weights.length, '0').split('');
+// Assumptions:
+// 1. weights is sorted large to small
+// 2. Each present has a unique weight
+// 3. When we find the smallest quantity of weights that make it to balancedWeight,
+//    the unused weights can balance between themselves.
+const greedyFindAll = (weights, targetWeight) => {
+  if (weights.length === 0 || targetWeight === 0) {
+    return []; // Either we already found it, or we never will. Either way, we're done.
   }
-}
 
-function* filterValid() {
-  for (const combo of generateAllCombos()) {
-    const sums = [ 0, 0, 0 ];
-    for (const [i, c] of combo.entries()) {
-      sums[c] += weights[i];
-    }
+  const first = weights[0];
+  const rest = weights.slice(1);
 
-    if (sums.every(s => s === balancedWeight)) {
-      yield {
-        combo,
-        packagesInFrontSeat: combo.filter(c => c === '0').length,
-        quantumEntanglement: combo.reduce((qe, cur, i) => qe * (cur === '0' ? weights[i] : 1), 1)
-      }
-    }
+  if (first === targetWeight) {
+    return [ [ first ] ]; // We can do no better. Any other solution would use 2 weights (per #1 & #2)
   }
-}
 
-const test = [...generateAllCombos()];
-console.log(test[0]);
-console.log(test[test.length - 1]);
-
-const sortBy = (a, b) => (a.packagesInFrontSeat - b.packagesInFrontSeat) || (a.quantumEntanglement - b.quantumEntanglement);
-
-const validCombos = [...filterValid()].sort(sortBy);
-
-console.log(JSON.stringify(validCombos[0]));
-console.log(JSON.stringify(validCombos[1]));
-
-/*
-const validCombos = [...filterValid()];
-console.log("Part 1: " + validCombos.length);
-
-const answerPart2 = combos => {
-  const distribution = Array(containers.length).fill(0);
-
-  for (combo of combos) {
-    const used = combo.reduce((sum, cur) => sum + cur, 0);
-    distribution[used]++;
+  const didntUseIt = greedyFindAll(rest, targetWeight);
+  if (first > targetWeight) {
+    return didntUseIt;
+  } else {
+    const usedIt = greedyFindAll(rest, targetWeight - first);
+    usedIt.forEach(x => x.push(first));
+    return usedIt.concat(didntUseIt);
   }
-  return distribution.find(x => x > 0);
-}
+};
 
-console.log("Part 2: " + answerPart2(validCombos));
-*/
+const qe = arr => arr.reduce((p, x) => p * x, 1);
+const ordering = (a, b) => a.length - b.length || qe(a) - qe(b);
+
+const balances = greedyFindAll(inputWeights, balancedWeight);
+balances.sort(ordering);
+console.log(balances[0]);
+console.log(qe(balances[0]));
