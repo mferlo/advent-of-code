@@ -1,14 +1,11 @@
-(require '[clojure.set] '[clojure.string :as str])
+(require '[clojure.string :as str])
 
 (defn parse [line]
-  (let [tokens (str/split (str line) #" " 3)]
-    [(first tokens) (str/split (last tokens) #", ")]))
+  (let [tokens (str/split line #" " 3)
+        connections (str/split (last tokens) #", ")]
+    [(first tokens) connections]))
 
-(def graph
-  (->> (slurp "input")
-       str/split-lines
-       (map parse)
-       (into {})))
+(def graph (into {} (map parse (str/split-lines (slurp "input")))))
 
 (defn filter-already-seen [seen s] (remove (partial contains? seen) s))
 
