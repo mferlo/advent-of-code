@@ -4,3 +4,4 @@ clojure-1.8.0.jar
 obj
 bin
 .vs
+*.exe
