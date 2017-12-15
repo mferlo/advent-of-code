@@ -73,16 +73,24 @@ namespace _14 {
     }
 
     class Program {
-        static void Main(string[] args) {
-            for (var i = 0; i < 8; i++) {
+
+        static bool[,] GetBits() {
+            var result = new bool[128,128];
+            for (var i = 0; i < 128; i++) {
                 var hasher = new KnotHash(256);
-                hasher.ProcessInput("flqrgnkx-" + i);
+                hasher.ProcessInput("nbysizxe-" + i);
                 var bits = hasher.GetBits();
-                for (var b = 0; b < 8; b++) {
-                    Console.Write(bits[b] ? "#" : ".");
+                for (var j = 0; j < 128; j++) {
+                    result[i, j] = bits[j];
                 }
-                Console.WriteLine();
             }
+            return result;
+        }
+
+        static void Main(string[] args) {
+            var bits = GetBits();
+            var part1 = bits.Cast<bool>().Count(b => b);
+            Console.WriteLine(part1);
         }
     }
 }
