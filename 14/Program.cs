@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -46,22 +47,42 @@ namespace _14 {
             }
         }
 
-        public string GetHash() {
-            var result = "";
+        private IEnumerable<int> GetBatches() {
             for (var i = 0; i < length; i += 16) {
-                result += values.Skip(i).Take(16).Aggregate((x, y) => x ^ y).ToString("x2");
+                yield return values.Skip(i).Take(16).Aggregate((x, y) => x ^ y);
+            }
+        }
+
+        public string GetHash() {
+            return String.Join("", GetBatches().Select(x => x.ToString("x2")));
+        }
+
+        public IList<bool> GetBits() {
+            var result = new bool[128];
+            var i = 0;
+            foreach (var val in GetBatches()) {
+                var copy = val;
+                for (int j = 7; j >= 0; j--) {
+                    result[i + j] = (copy & 1) == 1;
+                    copy >>= 1;
+                }
+                i += 8;
             }
             return result;
         }
-
-        public int Day10Part1 => values[0] * values[1];
     }
 
     class Program {
         static void Main(string[] args) {
-            var hasher = new KnotHash(256);
-            hasher.ProcessInput("102,255,99,252,200,24,219,57,103,2,226,254,1,0,69,216");
-            Console.WriteLine(hasher.GetHash());
+            for (var i = 0; i < 8; i++) {
+                var hasher = new KnotHash(256);
+                hasher.ProcessInput("flqrgnkx-" + i);
+                var bits = hasher.GetBits();
+                for (var b = 0; b < 8; b++) {
+                    Console.Write(bits[b] ? "#" : ".");
+                }
+                Console.WriteLine();
+            }
         }
     }
 }
