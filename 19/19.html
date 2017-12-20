@@ -10,11 +10,17 @@
       window.onload = init;
     </script>
   </head>
-  <body>
+  <body style="font-family: monospace;">
     <div id="ui">
-      <button onclick="solve()">Go</button>
-      <span id="part1">Part 1</span>
-      <span id="part2">Part 2</span>
+      <div>
+        Part 1: 
+        <span id="part1"></span>
+      </div>
+      <div>
+        Part 2: 
+        <span id="part2">0</span>
+      </div>
+      <button id="go" onclick="solve()">Go</button>
     </div>
     <canvas id="c" />
   </body>

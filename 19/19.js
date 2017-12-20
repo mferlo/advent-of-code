@@ -21,11 +21,22 @@ const initImage = () => {
 };
 
 const animateSolution = () => {
-  // FIXME: Add delay, show steps, show letters, animate letters
+  document.getElementById('go').disabled = true;
+  // FIXME: Add delay, animate letters
   const img = document.getElementById('c').getContext('2d');
+  const part1 = document.getElementById('part1');
+  let i = 0;
+
   img.fillStyle = 'black';
   for (const step of solution) {
+    i++;
     paint(img, step.x, step.y);
+
+    if (step.letter) {
+      part1.innerHTML = part1.innerHTML + step.letter;
+    }
+
+    part2.innerHTML = i;
   }
 };
 
