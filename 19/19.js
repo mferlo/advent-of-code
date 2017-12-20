@@ -20,24 +20,37 @@ const initImage = () => {
   }
 };
 
+const solutionIterator = () => {
+  const part1 = document.getElementById('part1');
+  const part2 = document.getElementById('part2');
+  const img = document.getElementById('c').getContext('2d');
+  img.fillStyle = 'black';
+
+  let i = 0;
+  let done = false;
+  return () => {
+    if (done) {
+      return;
+    }
+    const cur = solution[i++];
+    if (cur === undefined) {
+      done = true;
+      return;
+    }
+    paint(img, cur.x, cur.y);
+    if (cur.letter) {
+      part1.innerHTML = part1.innerHTML + cur.letter;
+    }
+    part2.innerHTML = i;
+  };
+};
+
 const animateSolution = () => {
   document.getElementById('go').disabled = true;
-  // FIXME: Add delay, animate letters
-  const img = document.getElementById('c').getContext('2d');
-  const part1 = document.getElementById('part1');
-  let i = 0;
 
-  img.fillStyle = 'black';
-  for (const step of solution) {
-    i++;
-    paint(img, step.x, step.y);
-
-    if (step.letter) {
-      part1.innerHTML = part1.innerHTML + step.letter;
-    }
-
-    part2.innerHTML = i;
-  }
+  // FIXME: animate letters
+  const iter = solutionIterator();
+  setInterval(iter, 200);
 };
 
 
@@ -66,11 +79,8 @@ const populateGrid = () => {
 const solve = () => {
   // FIXME, find path through maze
   for (let i = 0; i < 15; i++) {
-    solution.push({ x: i, y: i });
+    solution.push({ x: i, y: i, letter: 'ABCDEFGHIJKLMNOP'[i] });
   }
-
-  solution[0].letter = 'H';
-  solution[5].letter = 'W';
 
   animateSolution();
 }
