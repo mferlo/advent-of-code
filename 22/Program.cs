@@ -51,13 +51,31 @@ namespace _22 {
     }
 
     class Program {
-        static IEnumerable<(int x, int y)> TestInput() {
-            yield return (-1, 0);
-            yield return (1, 1);
+        const string TestInputString =
+@"..#
+#..
+...";
+
+        static IEnumerable<(int x, int y)> Parse(string input) {
+            var lines = input.Split(new [] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+            var n = lines.First().Length;
+            var max = n / 2;
+
+            var y = max;
+
+            foreach (var line in lines) {
+                for (var x = 0; x < n; x++) {
+                    if (line[x] == '#') {
+                        yield return (x - max, y);
+                    }
+                }
+                y--;
+            }                     
         }
 
         static void Test() {
-            var map = new Map(TestInput());
+            var map = new Map(Parse(TestInputString));
             var i = 0;
             while (true) {
                 map.Act();
