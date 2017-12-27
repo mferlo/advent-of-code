@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 
 namespace _22 {
@@ -51,14 +52,7 @@ namespace _22 {
     }
 
     class Program {
-        const string TestInputString =
-@"..#
-#..
-...";
-
-        static IEnumerable<(int x, int y)> Parse(string input) {
-            var lines = input.Split(new [] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-
+        static IEnumerable<(int x, int y)> Parse(IEnumerable<string> lines) {
             var n = lines.First().Length;
             var max = n / 2;
 
@@ -75,7 +69,7 @@ namespace _22 {
         }
 
         static void Test() {
-            var map = new Map(Parse(TestInputString));
+            var map = new Map(Parse(new[] { "..#", "#..", "..." }));
             var i = 0;
             while (true) {
                 map.Act();
@@ -95,8 +89,16 @@ namespace _22 {
             }
         }
 
+        static void Part1() {
+            var map = new Map(Parse(File.ReadLines("input")));
+            for (var i = 0; i < 10000; i++) {
+                map.Act();
+            }
+            Console.WriteLine(map.Part1);
+        }
+
         static void Main(string[] args) {
-            Test();
+            Part1();
         }
     }
 }
