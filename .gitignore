@@ -1,5 +1,7 @@
 \.vscode
 bin
 obj
+test
+input
 input.txt
 *.csproj
