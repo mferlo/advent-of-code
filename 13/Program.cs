@@ -26,7 +26,8 @@ namespace _13
         CurveUpLeft,
         CurveDownRight,
         CurveDownLeft,
-        Intersection
+        Intersection,
+        Accident
     }
 
     public static class Extensions {
@@ -50,6 +51,7 @@ namespace _13
                 case TrackType.CurveUpLeft: return '/';
                 case TrackType.CurveDownRight: return '/';
                 case TrackType.Intersection: return '+';
+                case TrackType.Accident: return 'X';
                 default: throw new Exception(t.ToString());
             }
         }
@@ -77,11 +79,18 @@ namespace _13
             this.Direction = this.Direction.Turn(turn);
             turnCount += 1;
         }
+
+        public bool CollidesWith(Cart cart) => cart != this && cart.X == this.X && cart.Y == this.Y;
     }
 
     public class Tracks {
         private TrackType[,] tracks;
         private IList<Cart> carts;
+
+        private const Direction Up = Direction.Up;
+        private const Direction Right = Direction.Right;
+        private const Direction Down = Direction.Down;
+        private const Direction Left = Direction.Left;
 
         public Tracks(IList<string> lines) {
             this.carts = new List<Cart>();
@@ -123,19 +132,19 @@ namespace _13
                             trackType = TrackType.Intersection;
                             break;
                         case '^':
-                            cartDirection = Direction.Up;
+                            cartDirection = Up;
                             trackType = TrackType.Vertical;
                             break;
                         case 'v':
-                            cartDirection = Direction.Down;
+                            cartDirection = Down;
                             trackType = TrackType.Vertical;
                             break;
                         case '>':
-                            cartDirection = Direction.Right;
+                            cartDirection = Right;
                             trackType = TrackType.Horizontal;
                             break;
                         case '<':
-                            cartDirection = Direction.Right;
+                            cartDirection = Left;
                             trackType = TrackType.Horizontal;
                             break;
                         default: throw new Exception($"{x} {y} {line[x]}");
@@ -147,6 +156,92 @@ namespace _13
                     }
                 }
             }
+        }
+
+        private static bool Collision(Cart c1, Cart c2) => c1.X == c2.X && c1.Y == c2.Y;
+
+        private (int x, int y) NextPositionAfterIntersection(Cart cart) {
+            cart.MakeNextTurn();
+            switch (cart.Direction) {
+                case Up: return (cart.X, cart.Y - 1);
+                case Left: return (cart.X - 1, cart.Y);
+                case Down: return (cart.X, cart.Y + 1);
+                case Right: return (cart.X + 1, cart.Y);
+                default: throw new Exception();
+            }
+        }
+
+        private void SetNextPosition(Cart cart) {
+            int x = cart.X;
+            int y = cart.Y;
+            switch (tracks[x, y]) {
+                case TrackType.Horizontal:
+                    x += cart.Direction == Right ? 1 : -1;
+                    break;
+                case TrackType.Vertical:
+                    y += cart.Direction == Down ? 1 : -1;
+                    break;
+                case TrackType.CurveDownLeft:
+                    if (cart.Direction == Up) {
+                        cart.Direction = Left;
+                        x -= 1;
+                    } else {
+                        cart.Direction = Down;
+                        y += 1;
+                    }
+                    break;
+                case TrackType.CurveDownRight:
+                    if (cart.Direction == Up) {
+                        cart.Direction = Right;
+                        x += 1;
+                    } else {
+                        cart.Direction = Down;
+                        y += 1;
+                    }
+                    break;
+                case TrackType.CurveUpLeft:
+                    if (cart.Direction == Down) {
+                        cart.Direction = Left;
+                        x -= 1;
+                    } else {
+                        cart.Direction = Up;
+                        y -= 1;
+                    }
+                    break;
+                case TrackType.CurveUpRight:
+                    if (cart.Direction == Down) {
+                        cart.Direction = Right;
+                        x += 1;
+                    } else {
+                        cart.Direction = Up;
+                        y -= 1;
+                    }
+                    break;
+                case TrackType.Intersection:
+                    (x, y) = NextPositionAfterIntersection(cart);
+                    break;
+                default:
+                    throw new Exception();
+            }
+            if (x < 0 || y < 0 || tracks[x, y] == TrackType.None) { throw new Exception(); }
+            cart.X = x;
+            cart.Y = y;
+        }
+
+        public bool TryStep(out Cart crashedCart) {
+            carts = carts.OrderBy(c => c.X).ThenBy(c => c.Y).ToList();
+            foreach (var cart in carts) {
+                SetNextPosition(cart);
+
+                if (carts.Any(c => cart.CollidesWith(c))) {
+                    tracks[cart.X, cart.Y] = TrackType.Accident;
+                    crashedCart = cart;
+                    return true;
+                }
+            }
+
+            crashedCart = null;
+            return false;
         }
 
         public override string ToString() {
@@ -172,9 +267,17 @@ namespace _13
     {
         static void Main(string[] args)
         {
-            var input = System.IO.File.ReadLines("test").ToList();
+            var input = System.IO.File.ReadLines("input").ToList();
             var tracks = new Tracks(input);
             Console.WriteLine(tracks);
+            Cart wreck;
+            var i = 0;
+            while (!tracks.TryStep(out wreck)) {
+                Console.WriteLine(++i);
+                // Console.WriteLine(tracks);
+                // Console.ReadLine();
+            }
+            Console.WriteLine($"{wreck.X}, {wreck.Y}");
         }
     }
 }
