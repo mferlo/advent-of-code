@@ -123,8 +123,8 @@ namespace _16
             return true;
         }
 
-        static int ValidOpCodes(IList<int> before, IList<int> input, IList<int> after) =>
-            Ops.Count(op => Equal(after, op(before, input[1], input[2], input[3])));
+        static IEnumerable<Op> ValidOps(IList<int> before, IList<int> input, IList<int> after) =>
+            Ops.Where(op => Equal(after, op(before, input[1], input[2], input[3])));
 
         static IList<int> ReadRegisters(string s) =>
             new[] {
@@ -137,8 +137,7 @@ namespace _16
         static IList<int> ReadOp(string s) =>
             s.Split(' ').Select(int.Parse).ToList();
 
-        static int Part1() {
-            var result = 0;
+        static void DoForEachInput(Action<IList<int>, IList<int>, IList<int>> action) {
             IList<int> before, input, after;
             var lines = System.IO.File.ReadLines("input").ToList();
             var i = 0;
@@ -146,28 +145,54 @@ namespace _16
                 before = ReadRegisters(lines[i]);
                 input = ReadOp(lines[i + 1]);
                 after = ReadRegisters(lines[i + 2]);
-                if (ValidOpCodes(before, input, after) >= 3) {
-                    result += 1;
-                }
+                action(before, input, after);
                 i += 4;
             }
+        }
+
+        static int Part1() {
+            var result = 0;
+            DoForEachInput((before, input, after) => {
+                if (ValidOps(before, input, after).Count() >= 3) {
+                    result += 1;
+                }
+            });
             return result;
         }
 
         static Dictionary<int, Op> DetermineCodes() {
-            throw new Exception();
+            var result = new Dictionary<int, Op>();
+            while (result.Count() < Ops.Count()) {
+                DoForEachInput((before, input, after) => {
+                    var code = input[0];
+                    if (result.ContainsKey(code)) {
+                        return;
+                    }
+                    var validOps = ValidOps(before, input, after).Except(result.Values);
+                    if (validOps.Count() == 1) {
+                        result.Add(code, validOps.Single());
+                    }
+                });
+            }
+            return result;
         }
 
-        static void Test() {
-            var before = new[] { 3, 2, 1, 1 };
-            var input = new[] { 9, 2, 1, 2 };
-            var after = new[] { 3, 2, 2, 1 };
-            Console.WriteLine(ValidOpCodes(before, input, after));
+        static IList<int> RunProgram(Dictionary<int, Op> ops) {
+            IList<int> registers = new int[4];
+            foreach (var line in System.IO.File.ReadLines("input").Skip(3354)) {
+                var input = ReadOp(line);
+                var op = ops[input[0]];
+                registers = op(registers, input[1], input[2], input[3]);
+            }
+            return registers;
         }
 
         static void Main(string[] args)
         {
             Console.WriteLine(Part1());
+            var opCodes = DetermineCodes();
+            var result = RunProgram(opCodes);
+            Console.WriteLine(result[0]);
         }
     }
 }
