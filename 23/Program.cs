@@ -5,31 +5,39 @@ using System.Text.RegularExpressions;
 
 namespace _23
 {
+    struct Position
+    {
+        public int X { get; }
+        public int Y { get; }
+        public int Z { get; }
+
+        public Position(int x, int y, int z)
+        {
+            X = x;
+            Y = y;
+            Z = z;
+        }
+
+        public int Distance(Position other) => Math.Abs(X - other.X) + Math.Abs(Y - other.Y) + Math.Abs(Z - other.Z);
+    }
+
     struct Nanobot
     {
         private static readonly Regex parseInput = new Regex(@"pos=<(-?\d+),(-?\d+),(-?\d+)>, r=(\d+)");
 
-        
-
-        public int X { get; }
-        public int Y { get; }
-        public int Z { get; }
+        public Position Position { get; }
         public int R { get; }
 
         public Nanobot(string s)
         {
             var values = parseInput.Match(s).Groups.Skip(1).Select(x => int.Parse(x.Value)).ToList();
-            X = values[0];
-            Y = values[1];
-            Z = values[2];
+            Position = new Position(values[0], values[1], values[2]);
             R = values[3];
         }
 
-        public override string ToString() => $"<{X},{Y},{Z}> {R}";
+        public bool InRange(Position other) => Position.Distance(other) <= R;
 
-        public int DistanceTo(Nanobot other) => Math.Abs(X - other.X) + Math.Abs(Y - other.Y) + Math.Abs(Z - other.Z);
-
-        public bool InRange(Nanobot other) => DistanceTo(other) <= R;
+        public bool InRange(Nanobot other) => InRange(other.Position);
     }
 
     class Program
@@ -40,8 +48,8 @@ namespace _23
             var bots = System.IO.File.ReadLines("input").Select(line => new Nanobot(line)).ToList();
             var strongest = bots.OrderByDescending(b => b.R).First();
 
-            Console.WriteLine(bots.Count(b => strongest.InRange(b)));
-
+            // Part 1
+            // Console.WriteLine(bots.Count(b => strongest.InRange(b)));
         }
 
         const string test = @"pos=<0,0,0>, r=4
