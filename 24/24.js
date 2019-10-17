@@ -2,30 +2,33 @@ const parser = /(?<units>\d+) units each with (?<hp>\d+) hit points (?<specials>
 
 let id = 0;
 
-const makeGroup = input => {
-  const group = {
-    ...input.match(parser).groups,
-    id: id++,
-    immunities: [],
-    weaknesses: []
-  };
+class Group {
+  constructor(input) {
+    this.id = id++;
+    const g = input.match(parser).groups;
+    this.units = +g.units;
+    this.hp = +g.hp;
+    this.attack = +g.attack;
+    this.initiative = +g.initiative;
+    this.attackType = g.attackType;
 
-  const specials = group.specials;
-  delete group.specials;
-  if (specials) {
-    if (specials.includes('immune')) {
-      group.immunities = specials.match(/immune to ([^;)]*)/).slice(1);
+    if (g.specials && g.specials.includes('immune')) {
+      this.immunities = g.specials.match(/immune to ([^;)]*)/).slice(1);
+    } else {
+      this.immunities = [];
     }
-    if (specials.includes('weak')) {
-      group.weaknesses = specials.match(/weak to ([^;)]*)/).slice(1);
+
+    if (g.specials && g.specials.includes('weak')) {
+      this.weaknesses = g.specials.match(/weak to ([^;)]*)/).slice(1);
+    } else {
+      this.weaknesses = [];
     }
   }
 
-  return group;
+  get effectivePower() {
+    return this.units * this.attack;
+  }
 }
-
-const effectivePower = group => group.units * group.attack;
-
 
 const immuneTestInput = [
   "17 units each with 5390 hit points (weak to radiation, bludgeoning) with an attack that does 4507 fire damage at initiative 2",
@@ -37,5 +40,5 @@ const infectionTestInput = [
   "4485 units each with 2961 hit points (immune to radiation; weak to fire, cold) with an attack that does 12 slashing damage at initiative 4"
 ];
 
-immuneTestInput.forEach(i => console.log(makeGroup(i)));
-infectionTestInput.forEach(i => console.log(makeGroup(i)));
+const g = new Group(immuneTestInput[0]);
+console.log(g);
