@@ -5,48 +5,69 @@ using System.Reflection;
 
 namespace _05
 {
-        class IntcodeComputer
+    class IntcodeComputer
     {
         int[] memory;
         bool done;
         int ip;
+        Queue<int> input;
+        Queue<int> output;
         Dictionary<int, (MethodInfo method, OpAttribute attribute)> opCache;
 
-        public IntcodeComputer(string input)
+        public IntcodeComputer(string program)
         {
-            memory = input.Split(",").Select(Int32.Parse).ToArray();
+            memory = program.Split(",").Select(Int32.Parse).ToArray();
             ip = 0;
             done = false;
+            input = new Queue<int>();
+            output = new Queue<int>();
             PrimeCache();
         }
+
+        public void Input(int value) => input.Enqueue(value);
+        public int Output() => output.Dequeue();
+        public IEnumerable<int> AllOutput => output;
 
         public int this[int i] { get => this.memory[i]; set => this.memory[i] = value; }
         public override string ToString() => $"[{ip}] {string.Join(", ", memory)}";
 
-        [Op(1, 4)]
-        void Op1() => this[this[ip+3]] = this[this[ip+1]] + this[this[ip+2]];
-        [Op(2, 4)]
-        void Op2() => this[this[ip+3]] = this[this[ip+1]] * this[this[ip+2]];
-        [Op(99, 1)]
-        void Op99() => this.done = true;
+        int FlagAtPos(int flags, int pos) => (flags / (int)Math.Pow(10, pos)) % 10;
+
+        bool IsImmediate(int flags, int pos) => FlagAtPos(flags, pos) == 1;
+
+        int Arg(int flags, int pos) => IsImmediate(flags, pos) ? this[ip+pos+1] : this[this[ip+pos+1]];
+
+        [Op("Add", 1, 4)]
+        void Op1(int flags) => this[this[ip+3]] = Arg(flags, 0) + Arg(flags, 1);
+        [Op("Mul", 2, 4)]
+        void Op2(int flags) => this[this[ip+3]] = Arg(flags, 0) * Arg(flags, 1);
+        [Op("Input", 3, 2)]
+        void Op3(int flags) => this[this[ip+1]] = input.Dequeue();
+        [Op("Output", 4, 2)]
+        void Op4(int flags) => output.Enqueue(Arg(flags, 0));
+        [Op("Halt", 99, 1)]
+        void Op99(int flags) => this.done = true;
 
         public void Run()
         {
-            var noArgs = new object[0];
             while (!done)
             {
-                var opInfo = opCache[this[ip]];
-                opInfo.method.Invoke(this, noArgs);
+                var opCode = this[ip] % 100;
+                var flags = this[ip] / 100;
+                var opInfo = opCache[opCode];
+                opInfo.method.Invoke(this, new Object[] { flags });
                 ip += opInfo.attribute.OpSize;
             }
         }
 
         class OpAttribute : Attribute
         {
+            public string Name;
             public int OpCode;
             public int OpSize;
-            public OpAttribute(int opCode, int opSize)
+            public OpAttribute(string name, int opCode, int opSize)
             {
+                Name = name;
                 OpCode = opCode;
                 OpSize = opSize;
             }
@@ -72,7 +93,17 @@ namespace _05
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            var program = System.IO.File.ReadAllText("input.txt");
+
+            // Part 1
+            var computer = new IntcodeComputer(program);
+            computer.Input(1);
+            computer.Run();
+            var outputs = computer.AllOutput.ToList();
+            var result = outputs.Last();
+            outputs.RemoveAt(outputs.Count - 1);
+            System.Diagnostics.Debug.Assert(outputs.All(val => val == 0));
+            Console.WriteLine(result);
         }
     }
 }
