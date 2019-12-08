@@ -44,25 +44,25 @@ namespace _05
 
         int Arg(int flags, int pos) => IsImmediate(flags, pos) ? this[ip+pos+1] : this[this[ip+pos+1]];
 
-        [Op("add", 1, 4)]
-        void Op1(int flags) => this[this[ip+3]] = Arg(flags, 0) + Arg(flags, 1);
-        [Op("mul", 2, 4)]
-        void Op2(int flags) => this[this[ip+3]] = Arg(flags, 0) * Arg(flags, 1);
-        [Op("Input", 3, 2)]
-        void Op3(int flags) => this[this[ip+1]] = input.Dequeue();
-        [Op("Output", 4, 2)]
-        void Op4(int flags) => output.Enqueue(Arg(flags, 0));
-        [Op("jnz", 5, 0)]
-        void Op5(int flags) => ip = Arg(flags, 0) != 0 ? Arg(flags, 1) : ip + 3;
-        [Op("jz", 6, 0)]
-        void Op6(int flags) => ip = Arg(flags, 0) == 0 ? Arg(flags, 1) : ip + 3;
-        [Op("lt", 7, 4)]
-        void Op7(int flags) => this[this[ip+3]] = Arg(flags, 0) < Arg(flags, 1) ? 1 : 0;
-        [Op("eq", 8, 4)]
-        void Op8(int flags) => this[this[ip+3]] = Arg(flags, 0) == Arg(flags, 1) ? 1 : 0;
+        [Op(1, 4)]
+        void Add(int flags) => this[this[ip+3]] = Arg(flags, 0) + Arg(flags, 1);
+        [Op(2, 4)]
+        void Mul(int flags) => this[this[ip+3]] = Arg(flags, 0) * Arg(flags, 1);
+        [Op(3, 2)]
+        void ReadInput(int flags) => this[this[ip+1]] = input.Dequeue();
+        [Op(4, 2)]
+        void WriteOutput(int flags) => output.Enqueue(Arg(flags, 0));
+        [Op(5, 0)]
+        void JumpIfNonZero(int flags) => ip = Arg(flags, 0) != 0 ? Arg(flags, 1) : ip + 3;
+        [Op(6, 0)]
+        void JumpIfZero(int flags) => ip = Arg(flags, 0) == 0 ? Arg(flags, 1) : ip + 3;
+        [Op(7, 4)]
+        void LessThan(int flags) => this[this[ip+3]] = Arg(flags, 0) < Arg(flags, 1) ? 1 : 0;
+        [Op(8, 4)]
+        void Equals(int flags) => this[this[ip+3]] = Arg(flags, 0) == Arg(flags, 1) ? 1 : 0;
 
-        [Op("Halt", 99, 1)]
-        void Op99(int flags) => this.done = true;
+        [Op(99, 1)]
+        void Halt(int flags) => this.done = true;
 
         public void Run()
         {
@@ -78,12 +78,10 @@ namespace _05
 
         class OpAttribute : Attribute
         {
-            public string Name;
             public int OpCode;
             public int OpSize;
-            public OpAttribute(string name, int opCode, int opSize)
+            public OpAttribute(int opCode, int opSize)
             {
-                Name = name;
                 OpCode = opCode;
                 OpSize = opSize;
             }
