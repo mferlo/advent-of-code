@@ -8,9 +8,11 @@ namespace _05
 {
     class IntcodeComputer
     {
+        public enum State { Initialized, Running, BlockedOnInput, Halted };
+
+        public State CurrentState;
         string program;
         int[] memory;
-        bool done;
         int ip;
         Queue<int> input;
         Queue<int> output;
@@ -27,9 +29,9 @@ namespace _05
         {
             memory = program.Split(",").Select(Int32.Parse).ToArray();
             ip = 0;
-            done = false;
             input = new Queue<int>();
             output = new Queue<int>();
+            CurrentState = State.Initialized;
         }
 
         public void Input(int value) => input.Enqueue(value);
@@ -63,18 +65,32 @@ namespace _05
         void Equals(int flags) => this[this[ip+3]] = Arg(flags, 0) == Arg(flags, 1) ? 1 : 0;
 
         [Op(99, 1)]
-        void Halt(int flags) => this.done = true;
+        void Halt(int flags) => this.CurrentState = State.Halted;
 
-        public void Run()
+        public State Run()
         {
-            while (!done)
+            CurrentState = State.Running;
+            while (CurrentState == State.Running)
             {
-                var opCode = this[ip] % 100;
-                var flags = this[ip] / 100;
-                var opInfo = opCache[opCode];
-                opInfo.method.Invoke(this, new Object[] { flags });
-                ip += opInfo.attribute.OpSize;
+                ExecuteInstruction();
             }
+            return CurrentState;
+        }
+
+        private void ExecuteInstruction()
+        {
+            var opCode = this[ip] % 100;
+            var flags = this[ip] / 100;
+            var opInfo = opCache[opCode];
+
+            if (opCode == 3 && !input.Any())
+            {
+                this.CurrentState = State.BlockedOnInput;
+                return;
+            }
+
+            opInfo.method.Invoke(this, new Object[] { flags });
+            ip += opInfo.attribute.OpSize;
         }
 
         class OpAttribute : Attribute
@@ -108,21 +124,45 @@ namespace _05
     {
         static List<IntcodeComputer> Computers;
 
-        static int RunAmplifiers(List<int> Sequence)
+        static int RunAmplifiers(List<int> sequence)
         {
-            Debug.Assert(Sequence.Count == Computers.Count);
+            Debug.Assert(sequence.Count == Computers.Count);
 
             var value = 0;
             for (var i = 0; i < Computers.Count; i++)
             {
                 var c = Computers[i];
                 c.Reboot();
-                c.Input(Sequence[i]);
+                c.Input(sequence[i]);
                 c.Input(value);
                 c.Run();
                 value = c.Output();                
             }
             return value;            
+        }
+
+        static int RunAmplifiersFeedbackMode(List<int> sequence)
+        {
+            // Initial Input
+            for (var i = 0; i < Computers.Count; i++)
+            {
+                Computers[i].Reboot();
+                Computers[i].Input(sequence[i] + 5);
+            }
+
+            // Iterate
+            var value = 0;
+            while (Computers[4].CurrentState != IntcodeComputer.State.Halted)
+            {
+                for (var i = 0; i < Computers.Count; i++)
+                {
+                    Computers[i].Input(value);
+                    Computers[i].Run();
+                    value = Computers[i].Output();
+                }
+            }
+
+            return value;
         }
 
         static List<int> ToBase5Digits(int x)
@@ -141,24 +181,18 @@ namespace _05
         static IEnumerable<List<int>> AllSequences() =>
             Enumerable.Range(0, (int)Math.Pow(5, 5)).Select(ToBase5Digits).Where(HasAll5Digits);
 
-        static (List<int> Sequence, int Value) Max(string program)
+        static void Test(string program, bool part2 = false)
         {
+            Computers = Enumerable.Range(0, 5).Select(_ => new IntcodeComputer(program)).ToList();
             (List<int> Sequence, int Value) result = (null, Int32.MinValue);
             foreach (var seq in AllSequences())
             {
-                var value = RunAmplifiers(seq);
+                var value = part2 ? RunAmplifiersFeedbackMode(seq) : RunAmplifiers(seq);
                 if (value > result.Value)
                 {
                     result = (seq, value);
                 }
             }
-            return result;
-        }
-
-        static void Test(string program)
-        {
-            Computers = Enumerable.Range(0, 5).Select(_ => new IntcodeComputer(program)).ToList();
-            var result = Max(program);
             Console.WriteLine(String.Join(",", result.Sequence) + " " + result.Value);
         }
 
@@ -169,10 +203,17 @@ namespace _05
             Test("3,31,3,32,1002,32,10,32,1001,31,-2,31,1007,31,0,33,1002,33,7,33,1,33,31,31,1,32,31,31,4,31,99,0,0,0");
         }
 
+        static void Tests2()
+        {
+            Test("3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5", part2: true);
+            Test("3,52,1001,52,-5,52,3,53,1,52,56,54,1007,54,5,55,1005,55,26,1001,54,-5,54,1105,1,12,1,53,54,53,1008,54,0,55,1001,55,1,55,2,53,55,53,4,53,1001,56,-1,56,1005,56,6,99,0,0,0,0,10", part2: true);
+        }
+
         static void Main(string[] args)
         {
-            // Tests();
-            Test(System.IO.File.ReadAllText("input.txt"));
+            var program = System.IO.File.ReadAllText("input.txt");
+            Test(program);
+            Test(program, part2: true);
         }
     }
 }
