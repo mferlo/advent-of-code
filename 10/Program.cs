@@ -38,6 +38,18 @@ namespace _10
             return new Point(deltaX / gcd, deltaY / gcd);
         }
 
+        // We want angles *clockwise* from "up"; normal angle measurement
+        // is *counterclockwise* from "right".
+        // We can make this work by mirroring across the y=x line;
+        // which just means swapping the x and y args to Atan2.
+        // Since  our Y-axis is inverted compared to normal cartesian,
+        // we also negate our Y value
+        public double GetAngleTo(Point to)
+        {
+            var result = Math.Atan2(to.X - X, -(to.Y - Y));
+            return result >= 0 ? result : result + 2*Math.PI;
+        }
+
         public Point Add(Point delta) =>
             new Point(this.X + delta.X, this.Y + delta.Y);
         
@@ -71,11 +83,23 @@ namespace _10
             }
         }
 
-        public int CountVisibleFrom(Point asteroid)
+        IEnumerable<Point> GetVisiblePoints(Point asteroid) =>
+            Asteroids.Except(Asteroids.SelectMany(a => FindShadowedPoints(asteroid, a)).ToHashSet());
+
+        public int CountVisibleFrom(Point asteroid) =>
+            GetVisiblePoints(asteroid).Count();
+
+        public IEnumerable<Point> FireTheLaser(Point origin)
         {
-            var shadowedPoints = Asteroids.SelectMany(a => FindShadowedPoints(asteroid, a)).ToHashSet();
-            var result = Asteroids.Except(shadowedPoints);
-            return result.Count();
+            while (Asteroids.Count > 1)
+            {
+                var targets = GetVisiblePoints(origin).OrderBy(a => origin.GetAngleTo(a));
+                foreach (var target in targets)
+                {
+                    yield return target;
+                    Asteroids.Remove(target);
+                }
+            }
         }
     }
 
@@ -118,7 +142,18 @@ namespace _10
 
         static void Main(string[] args)
         {
-            Console.WriteLine(AnalyzeLocations(ReadFile("input.txt")).Max(x => x.visible));            
+            var asteroidField = ReadFile("input.txt");
+            (Point asteroid, int visible) monitoringStation = (default, 0);
+            foreach (var candidate in AnalyzeLocations(asteroidField))
+            {
+                if (candidate.visible > monitoringStation.visible)
+                {
+                    monitoringStation = candidate;
+                }
+            }
+            Console.WriteLine(monitoringStation);
+
+            Console.WriteLine(asteroidField.FireTheLaser(monitoringStation.asteroid).ElementAt(199));
         }
     }
 }
