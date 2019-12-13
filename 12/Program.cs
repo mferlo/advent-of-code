@@ -37,10 +37,16 @@ namespace _12
 
     class Space
     {
+        List<(int x, int y, int z)> InitialState;
         List<Moon> Moons;
 
-        public Space(IEnumerable<(int x, int y, int z)> moons) =>
-            Moons = moons.Select(p => new Moon(p)).ToList();
+        public Space(IEnumerable<(int x, int y, int z)> moons)
+        {
+            InitialState = moons.ToList();
+            Reset();            
+        }
+
+        void Reset() => Moons = InitialState.Select(p => new Moon(p)).ToList();
 
         public int Energy => Moons.Sum(m => m.Energy);
 
@@ -84,6 +90,29 @@ namespace _12
             p1 == p2 ? (0, 0) : p1 > p2 ? (-1, 1): (1, -1);
 
         void ApplyVelocity() => Moons.ForEach(m => m.ApplyVelocity());
+
+        public (int x, int y, int z) FindPeriods() =>
+            (FindPeriod(m => m.pX, m => m.vX),
+             FindPeriod(m => m.pY, m => m.vY),
+             FindPeriod(m => m.pZ, m => m.vZ));
+
+        int FindPeriod(Func<Moon, int> p, Func<Moon, int> v)
+        {
+            string State() => String.Join(" ", Moons.Select(m => $"{p(m)}/{v(m)}"));
+
+            Reset();
+            var target = State();
+            var period = 0;
+
+            do
+            {
+                period++;
+                Step();
+            }
+            while (State() != target);
+
+            return period;
+        }
     }
 
     class Program
@@ -104,24 +133,22 @@ namespace _12
             (3, 5, -1),
         };
 
+        // https://stackoverflow.com/a/29717490
+        static long lcm((int x, int y, int z) nums) => lcm(lcm(nums.x, nums.y), nums.z);
+        static long lcm(long a, long b) => Math.Abs(a * b) / GCD(a, b);
+        static long GCD(long a, long b) => b == 0 ? a : GCD(b, a % b);
 
         static void Main(string[] args)
         {
-
             var space = new Space(input);
-            /*
-            Console.WriteLine(space);
-            space.Step();
-            Console.WriteLine(space);
-            */
-            
             for (var i = 1; i <= 1000; i++)
             {
                 space.Step();
             }
-
             Console.WriteLine(space.Energy);
-            
+
+            var part2 = space.FindPeriods();
+            Console.WriteLine(part2 + " " + lcm(part2));
         }
     }
 }
