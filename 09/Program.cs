@@ -38,7 +38,6 @@ namespace _09
         public enum State { Initialized, Running, BlockedOnInput, Halted };
 
         public State CurrentState;
-        string program;
         Memory memory;
         long ip;
         long relativeBase;
@@ -142,6 +141,8 @@ namespace _09
         void LessThan(List<ArgType> args) => AssignValue(ip+3, args[3], Value(ip+1, args[1]) < Value(ip+2, args[2]) ? 1 : 0);
         [Op(8, 4, 3)]
         void Equals(List<ArgType> args) => AssignValue(ip+3, args[3], Value(ip+1, args[1]) == Value(ip+2, args[2]) ? 1 : 0);
+        [Op(9, 2, 1)]
+        void RelativeBase(List<ArgType> args) => relativeBase += Value(ip+1, args[1]);
 
         [Op(99, 1, 0)]
         void Halt(List<ArgType> args) => this.CurrentState = State.Halted;
@@ -214,20 +215,38 @@ namespace _09
             Reboot();
             Input(7);
             this.Run();
-            Debug.Assert(this.CurrentState == State.Halted);
             Debug.Assert(this.Output() == 999);
 
             Reboot();
             Input(8);
             this.Run();
-            Debug.Assert(this.CurrentState == State.Halted);
             Debug.Assert(this.Output() == 1000);
 
             Reboot();
             Input(9);
             this.Run();
-            Debug.Assert(this.CurrentState == State.Halted);
             Debug.Assert(this.Output() == 1001);
+
+            // should output the large number in the middle
+            var bigNum = "104,1125899906842624,99";
+            var bigNumValue = 1125899906842624;
+            SetMemory(bigNum);
+            Reboot();
+            this.Run();
+            Debug.Assert(this.Output() == bigNumValue);
+
+            // should output a 16-digit number.
+            SetMemory("1102,34915192,34915192,7,4,7,99,0");
+            Reboot();
+            this.Run();
+            Debug.Assert(this.Output().ToString().Length == 16);
+
+            var quine = "109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99";
+            SetMemory(quine);
+            Reboot();
+            this.Run();
+            var output = string.Join(",", this.AllOutput);
+            Debug.Assert(quine == output);
         }
     }
 
@@ -235,7 +254,10 @@ namespace _09
     {
         static void Main(string[] args)
         {
-            var test = new IntcodeComputer("123");
+            var computer = new IntcodeComputer(System.IO.File.ReadAllText("input.txt").Trim());
+            computer.Input(1);
+            computer.Run();
+            Console.WriteLine(computer.Output());
         }
     }
 }
