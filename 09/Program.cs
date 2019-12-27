@@ -6,66 +6,145 @@ using System.Reflection;
 
 namespace _09
 {
+    class Memory
+    {
+        Dictionary<long, long> M;
+        Dictionary<long, long> ROM;
+
+        public Memory(IEnumerable<long> initialValues)
+        {
+            ROM = initialValues.Select((value, pos) => (value, pos: (long)pos)).ToDictionary(kvp => kvp.pos, kvp => kvp.value);
+            Reboot();
+        }
+
+        public void Reboot() => M = new Dictionary<long, long>(ROM);
+
+        public long this[long i]
+        {
+            get {
+                if (i < 0) { throw new Exception(); }
+                return M.GetValueOrDefault(i);
+            }
+            set {
+                if (i < 0) { throw new Exception(); }
+                M[i] = value;
+            }
+        }
+    }
+
+
     class IntcodeComputer
     {
         public enum State { Initialized, Running, BlockedOnInput, Halted };
 
         public State CurrentState;
         string program;
-        int[] memory;
-        int ip;
-        Queue<int> input;
-        Queue<int> output;
+        Memory memory;
+        long ip;
+        long relativeBase;
+        Queue<long> input;
+        Queue<long> output;
         Dictionary<int, (MethodInfo method, OpAttribute attribute)> opCache;
 
         public IntcodeComputer(string program)
         {
-            this.program = program;
-            PrimeCache();
-            Reboot();
+            Boot();
+            SetMemory(program);
         }
+
+        void Boot()
+        {
+            PrimeCache();
+            POST();
+        }
+
+        void SetMemory(string program) => memory = new Memory(program.Split(",").Select(long.Parse));
 
         public void Reboot()
         {
-            memory = program.Split(",").Select(Int32.Parse).ToArray();
+            memory.Reboot();
             ip = 0;
-            input = new Queue<int>();
-            output = new Queue<int>();
+            relativeBase = 0;
+            input = new Queue<long>();
+            output = new Queue<long>();
             CurrentState = State.Initialized;
         }
 
-        public void Input(int value) => input.Enqueue(value);
-        public int Output() => output.Dequeue();
-        public IEnumerable<int> AllOutput => output;
+        public void Input(long value) => input.Enqueue(value);
+        public long Output() => output.Dequeue();
+        public IEnumerable<long> AllOutput => output;
 
-        public int this[int i] { get => this.memory[i]; set => this.memory[i] = value; }
-        public override string ToString() => $"[{ip}] {string.Join(", ", memory)}";
+        enum ArgType { Position = 0, Immediate = 1, Relative = 2, OpCode = 99 };
+        List<ArgType> GetArgTypes(OpAttribute opInfo, int flags)
+        {
+            IEnumerable<ArgType> GetArgs()
+            {
+                yield return ArgType.OpCode;
+                for (int i = 1; i <= opInfo.ArgCount; i++)
+                {
+                    if (flags > 0)
+                    {
+                        yield return (ArgType)(flags % 10);
+                        flags /= 10;                    
+                    }
+                    else
+                    {
+                        yield return (ArgType)0;
+                    }
+                }
+            }
 
-        int FlagAtPos(int flags, int pos) => (flags / (int)Math.Pow(10, pos)) % 10;
+            return GetArgs().ToList();
+        }
 
-        bool IsImmediate(int flags, int pos) => FlagAtPos(flags, pos) == 1;
+        long Value(long pos, ArgType argType)
+        {
+            var valueAtPosition = memory[pos];
+            return argType switch
+            {
+                ArgType.Immediate => valueAtPosition,
+                ArgType.Position => memory[valueAtPosition],
+                ArgType.Relative => memory[valueAtPosition + relativeBase],
+                _ => throw new Exception()
+            };
+        }
 
-        int Arg(int flags, int pos) => IsImmediate(flags, pos) ? this[ip+pos+1] : this[this[ip+pos+1]];
+        void AssignValue(long pos, ArgType argType, long value)
+        {
+            var pointer = memory[pos];
+            if (argType == ArgType.Position)
+            {
+                memory[pointer] = value;
+            }
+            else if (argType == ArgType.Relative)
+            {
+                memory[pointer + relativeBase] = value;
+            }
+            else
+            {
+                throw new Exception();
+            }
+        }
 
-        [Op(1, 4)]
-        void Add(int flags) => this[this[ip+3]] = Arg(flags, 0) + Arg(flags, 1);
-        [Op(2, 4)]
-        void Mul(int flags) => this[this[ip+3]] = Arg(flags, 0) * Arg(flags, 1);
-        [Op(3, 2)]
-        void ReadInput(int flags) => this[this[ip+1]] = input.Dequeue();
-        [Op(4, 2)]
-        void WriteOutput(int flags) => output.Enqueue(Arg(flags, 0));
-        [Op(5, 0)]
-        void JumpIfNonZero(int flags) => ip = Arg(flags, 0) != 0 ? Arg(flags, 1) : ip + 3;
-        [Op(6, 0)]
-        void JumpIfZero(int flags) => ip = Arg(flags, 0) == 0 ? Arg(flags, 1) : ip + 3;
-        [Op(7, 4)]
-        void LessThan(int flags) => this[this[ip+3]] = Arg(flags, 0) < Arg(flags, 1) ? 1 : 0;
-        [Op(8, 4)]
-        void Equals(int flags) => this[this[ip+3]] = Arg(flags, 0) == Arg(flags, 1) ? 1 : 0;
+        [Op(1, 4, 3)]
+        void Add(List<ArgType> args) => AssignValue(ip+3, args[3], Value(ip+1, args[1]) + Value(ip+2, args[2]));
+        [Op(2, 4, 3)]
+        void Mul(List<ArgType> args) => AssignValue(ip+3, args[3], Value(ip+1, args[1]) * Value(ip+2, args[2]));
+        [Op(3, 2, 1)]
+        void ReadInput(List<ArgType> args) => AssignValue(ip+1, args[1], input.Dequeue());
+        [Op(4, 2, 1)]
+        void WriteOutput(List<ArgType> args) => output.Enqueue(Value(ip+1, args[1]));
+        [Op(5, 0, 2)]
+        void JumpIfNonZero(List<ArgType> args) => ip = Value(ip+1, args[1]) != 0 ? Value(ip+2, args[2]) : ip + 3;
+        [Op(6, 0, 2)]
+        void JumpIfZero(List<ArgType> args) => ip = Value(ip+1, args[1]) == 0 ? Value(ip+2, args[2]) : ip + 3;
+        [Op(7, 4, 3)]
+        void LessThan(List<ArgType> args) => AssignValue(ip+3, args[3], Value(ip+1, args[1]) < Value(ip+2, args[2]) ? 1 : 0);
+        [Op(8, 4, 3)]
+        void Equals(List<ArgType> args) => AssignValue(ip+3, args[3], Value(ip+1, args[1]) == Value(ip+2, args[2]) ? 1 : 0);
 
-        [Op(99, 1)]
-        void Halt(int flags) => this.CurrentState = State.Halted;
+        [Op(99, 1, 0)]
+        void Halt(List<ArgType> args) => this.CurrentState = State.Halted;
 
         public State Run()
         {
@@ -79,9 +158,11 @@ namespace _09
 
         private void ExecuteInstruction()
         {
-            var opCode = this[ip] % 100;
-            var flags = this[ip] / 100;
+            var opCode = (int)(memory[ip] % 100);
+            var flags = (int)(memory[ip] / 100);
             var opInfo = opCache[opCode];
+
+            var args = GetArgTypes(opInfo.attribute, flags);
 
             if (opCode == 3 && !input.Any())
             {
@@ -89,7 +170,7 @@ namespace _09
                 return;
             }
 
-            opInfo.method.Invoke(this, new Object[] { flags });
+            opInfo.method.Invoke(this, new Object[] { args });
             ip += opInfo.attribute.OpSize;
         }
 
@@ -97,10 +178,12 @@ namespace _09
         {
             public int OpCode;
             public int OpSize;
-            public OpAttribute(int opCode, int opSize)
+            public int ArgCount;
+            public OpAttribute(int opCode, int opSize, int argCount)
             {
                 OpCode = opCode;
                 OpSize = opSize;
+                ArgCount = argCount;
             }
         }
 
@@ -118,12 +201,41 @@ namespace _09
                 }
             }
         }
+
+        void POST()
+        {
+            var io_and_comp = "3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99";
+            /* The above example program uses an input instruction to ask for a single number.
+               The program will then output 999 if the input value is below 8,
+               output 1000 if the input value is equal to 8,
+               or output 1001 if the input value is greater than 8. */
+            SetMemory(io_and_comp);
+
+            Reboot();
+            Input(7);
+            this.Run();
+            Debug.Assert(this.CurrentState == State.Halted);
+            Debug.Assert(this.Output() == 999);
+
+            Reboot();
+            Input(8);
+            this.Run();
+            Debug.Assert(this.CurrentState == State.Halted);
+            Debug.Assert(this.Output() == 1000);
+
+            Reboot();
+            Input(9);
+            this.Run();
+            Debug.Assert(this.CurrentState == State.Halted);
+            Debug.Assert(this.Output() == 1001);
+        }
     }
 
     class Program
     {
         static void Main(string[] args)
         {
+            var test = new IntcodeComputer("123");
         }
     }
 }
