@@ -55,11 +55,12 @@ namespace _09
         {
             PrimeCache();
             POST();
+            Initialize();
         }
 
         void SetMemory(string program) => memory = new Memory(program.Split(",").Select(long.Parse));
 
-        public void Reboot()
+        public void Initialize()
         {
             memory.Reboot();
             ip = 0;
@@ -212,17 +213,17 @@ namespace _09
                or output 1001 if the input value is greater than 8. */
             SetMemory(io_and_comp);
 
-            Reboot();
+            Initialize();
             Input(7);
             this.Run();
             Debug.Assert(this.Output() == 999);
 
-            Reboot();
+            Initialize();
             Input(8);
             this.Run();
             Debug.Assert(this.Output() == 1000);
 
-            Reboot();
+            Initialize();
             Input(9);
             this.Run();
             Debug.Assert(this.Output() == 1001);
@@ -231,19 +232,19 @@ namespace _09
             var bigNum = "104,1125899906842624,99";
             var bigNumValue = 1125899906842624;
             SetMemory(bigNum);
-            Reboot();
+            Initialize();
             this.Run();
             Debug.Assert(this.Output() == bigNumValue);
 
             // should output a 16-digit number.
             SetMemory("1102,34915192,34915192,7,4,7,99,0");
-            Reboot();
+            Initialize();
             this.Run();
             Debug.Assert(this.Output().ToString().Length == 16);
 
             var quine = "109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99";
             SetMemory(quine);
-            Reboot();
+            Initialize();
             this.Run();
             var output = string.Join(",", this.AllOutput);
             Debug.Assert(quine == output);
@@ -256,6 +257,11 @@ namespace _09
         {
             var computer = new IntcodeComputer(System.IO.File.ReadAllText("input.txt").Trim());
             computer.Input(1);
+            computer.Run();
+            Console.WriteLine(computer.Output());
+
+            computer.Initialize();
+            computer.Input(2);
             computer.Run();
             Console.WriteLine(computer.Output());
         }
