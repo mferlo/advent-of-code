@@ -8,9 +8,14 @@ namespace Advent2020
     {
         static void Main(string[] args)
         {
-            var (parse, part1, part2) = GetDayActions(args);
+            var (parse, test, part1, part2) = GetDayActions(args);
 
             parse.Invoke(null, null);
+
+            if (test != null)
+            {
+                test.Invoke(null, null);
+            }
 
             Time(part1, "Part 1");
             Time(part2, "Part 2");
@@ -33,7 +38,7 @@ namespace Advent2020
             Console.WriteLine();
         }
 
-        static (MethodInfo Parse, MethodInfo Part1, MethodInfo Part2) GetDayActions(string[] args)
+        static (MethodInfo Parse, MethodInfo Test, MethodInfo Part1, MethodInfo Part2) GetDayActions(string[] args)
         {
             // TODO: Allow individually invoking Part1/Part2
             if (args.Length != 1)
@@ -53,6 +58,7 @@ namespace Advent2020
 
             return (
                 type.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public),
+                type.GetMethod("Test", BindingFlags.Static | BindingFlags.Public),
                 type.GetMethod("Part1", BindingFlags.Static | BindingFlags.Public),
                 type.GetMethod("Part2", BindingFlags.Static | BindingFlags.Public)
             );

@@ -15,6 +15,11 @@ namespace Advent2020
             Input = "No solution";
         }
 
+        public static void Test()
+        {
+
+        }
+
         public static object Part1()
         {
             return Input;
