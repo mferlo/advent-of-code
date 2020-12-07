@@ -10,12 +10,13 @@ namespace Advent2020
         {
             var (parse, test, part1, part2) = GetDayActions(args);
 
-            parse.Invoke(null, null);
-
             if (test != null)
             {
                 test.Invoke(null, null);
+                Console.WriteLine();
             }
+
+            parse.Invoke(null, null);
 
             Time(part1, "Part 1");
             Time(part2, "Part 2");
