@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace Advent2020
 {
-    class Program
+    class Runner
     {
         static void Main(string[] args)
         {

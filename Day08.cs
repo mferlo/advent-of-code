@@ -28,7 +28,7 @@ namespace Advent2020
 
     enum State { Running, Stopped, InfiniteLoop }
 
-    class Code
+    class Program
     {
         public int Accumulator { get; private set; }
         public int IP { get; private set; }
@@ -36,15 +36,15 @@ namespace Advent2020
 
         private List<Instruction> Instructions;
 
-        private Code(List<Instruction> instructions)
+        private Program(List<Instruction> instructions)
         {
             Instructions = instructions;
             Accumulator = 0;
             IP = 0;
         }
 
-        public static Code Parse(IList<string> lines) =>
-            new Code(lines.Select(line => Instruction.Parse(line)).ToList());
+        public static Program Parse(IList<string> lines) =>
+            new Program(lines.Select(line => Instruction.Parse(line)).ToList());
 
 
         public void Run()
@@ -106,14 +106,14 @@ namespace Advent2020
 
         public static void Test()
         {
-            var program = Code.Parse(TestInput);
+            var program = Program.Parse(TestInput);
             program.Run();
             Console.WriteLine(program.Accumulator);
         }
 
         public static object Part1()
         {
-            var program = Code.Parse(Input);
+            var program = Program.Parse(Input);
             program.Run();
             return program.Accumulator;
         }
