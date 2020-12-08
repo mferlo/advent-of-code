@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
+
 
 namespace Advent2020
 {
@@ -33,6 +34,7 @@ namespace Advent2020
         public int Accumulator { get; private set; }
         public int IP { get; private set; }
         public State State { get; private set; }
+        public int InstructionCount => Instructions.Count;
 
         private List<Instruction> Instructions;
 
@@ -43,7 +45,7 @@ namespace Advent2020
             IP = 0;
         }
 
-        public static Program Parse(IList<string> lines) =>
+        public static Program Parse(IEnumerable<string> lines) =>
             new Program(lines.Select(line => Instruction.Parse(line)).ToList());
 
 
@@ -109,6 +111,7 @@ namespace Advent2020
             var program = Program.Parse(TestInput);
             program.Run();
             Console.WriteLine(program.Accumulator);
+            Console.WriteLine(Part2(TestInput));
         }
 
         public static object Part1()
@@ -118,9 +121,37 @@ namespace Advent2020
             return program.Accumulator;
         }
 
-        public static object Part2()
+        // Somewhere in the program, either a jmp is supposed to be a nop, or a nop is supposed to be a jmp.
+        // (No acc instructions were harmed in the corruption of this boot code.)
+        static IEnumerable<Program> GeneratedChangedPrograms(IList<string> input)
         {
-            return Input;
+            var original = ImmutableList<string>.Empty.AddRange(input);
+
+            for (var i = 0; i < original.Count; i++)
+            {
+                var inst = original[i];
+                if (inst.StartsWith("acc"))
+                {
+                    continue;
+                }
+                var newInst = inst.StartsWith("jmp") ? inst.Replace("jmp", "nop") : inst.Replace("nop", "jmp");
+                yield return Program.Parse(original.SetItem(i, newInst));
+            }
         }
+
+        static object Part2(IList<string> input)
+        {
+            foreach (var program in GeneratedChangedPrograms(input))
+            {
+                program.Run();
+                if (program.State == State.Stopped && program.IP == program.InstructionCount)
+                {
+                    return program.Accumulator;
+                }
+            }
+            return 0;
+        }
+
+        public static object Part2() => Part2(Input);
     }
 }
