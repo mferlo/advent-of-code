@@ -352,6 +352,21 @@ namespace Advent2020
                     Debug.Assert(picture[x, y] == correctTestPicture[x][y]);
                 }
             }
+
+            var monster = new Monster();
+            for (var i = 0; i < 4; i++)
+            {
+                Console.WriteLine(i);
+                Console.WriteLine(monster);
+                monster.Rotate();
+            }
+            monster.Flip();
+            for (var i = 0; i < 4; i++)
+            {
+                Console.WriteLine(i);
+                Console.WriteLine(monster);
+                monster.Rotate();
+            }
         }
 
         public static object Part1() => CornerProduct();
@@ -393,11 +408,147 @@ namespace Advent2020
             return result;
         }
 
+        class Monster
+        {
+            public IEnumerable<(int X, int Y)> Coordinates;
+            int Width;
+            int Height;
+            List<string> Lines;
+
+            static readonly string line1 = "                  # ";
+            static readonly string line2 = "#    ##    ##    ###";
+            static readonly string line3 = " #  #  #  #  #  #   ";
+
+            public Monster()
+            {
+                Lines = new List<string> { line1, line2, line3 };
+                SetCoordinates();
+            }
+
+            public override string ToString() => string.Join("\n", Lines);
+
+            public void Rotate()
+            {
+                var newLines = new List<string>();
+                Lines.Reverse();
+                for (var i = 0; i < Width; i++)
+                {
+                    newLines.Add(new String(Lines.Select(line => line[i]).ToArray()));
+                }
+                Lines = newLines;
+                SetCoordinates();
+            }
+
+            public void Flip()
+            {
+                Lines = Lines.Select(line => new string(line.Reverse().ToArray())).ToList();
+                SetCoordinates();
+            }
+
+            void SetCoordinates()
+            {
+                Width = Lines[0].Length;
+                Height = Lines.Count;
+                var coordinates = new List<(int X, int Y)>();
+                for (var x = 0; x < Width; x++)
+                {
+                    for (var y = 0; y < Height; y++)
+                    {
+                        if (Lines[y][x] == '#')
+                        {
+                            coordinates.Add((x, y));
+                        }
+                    }
+                }
+                Coordinates = coordinates;
+            }
+
+            public bool FoundAt(char[,] picture, int x, int y)
+            {
+                if (x + Width >= picture.GetLength(0)) return false;
+                if (y + Height >= picture.GetLength(1)) return false;
+
+                return Coordinates.All(c => picture[x + c.X, y + c.Y] == '#');
+            }
+        }
+
+        static bool?[,] InitializeSearchGrid(char[,] picture)
+        {
+            var xMax = picture.GetLength(0);
+            var yMax = picture.GetLength(1);
+            var result = new bool?[xMax, yMax];
+            for (var x = 0; x < xMax; x++)
+            {
+                for (var y = 0; y < yMax; y++)
+                {
+                    if (picture[x, y] == '#')
+                    {
+                        result[x, y] = false;
+                    }
+                }
+            }
+            return result;
+        }
+
+        static (bool Found, bool?[,] SearchGrid) FindSeaMonster(char[,] picture, Monster monster)
+        {
+            var found = false;
+            var searchGrid = InitializeSearchGrid(picture);
+
+            for (var x = 0; x < picture.GetLength(0); x++)
+            {
+                for (var y = 0; y < picture.GetLength(1); y++)
+                {
+                    if (monster.FoundAt(picture, x, y))
+                    {
+                        found = true;
+                        foreach (var c in monster.Coordinates)
+                        {
+                            searchGrid[x + c.X, y + c.Y] = true;
+                        }
+                    }
+                }
+            }
+
+            return (found, searchGrid);
+        }
+
+        static (bool Found, bool?[,] SearchGrid) FindSeaMonsterAllRotations(char[,] picture, Monster monster)
+        {
+            var rotations = 0;
+            while (rotations <= 3)
+            {
+                var result = FindSeaMonster(picture, monster);
+                if (result.Found)
+                {
+                    return result;
+                }
+
+                monster.Rotate();
+                rotations++;
+            }
+            return (false, null);
+        }
+
+        static bool?[,] FindSeaMonster(char[,] picture)
+        {
+            var monster = new Monster();
+            var result = FindSeaMonsterAllRotations(picture, monster);
+            if (!result.Found)
+            {
+                monster.Flip();
+                result = FindSeaMonsterAllRotations(picture, monster);
+            }
+            Debug.Assert(result.Found);
+            return result.SearchGrid;
+        }
+
         public static object Part2()
         {
             var grid = Assemble();
             var picture = MakePicture(grid);
-            return 0;
+            var monsterHuntResults = FindSeaMonster(picture);
+            return monsterHuntResults.Cast<bool?>().Count(b => b == false);
         }
     }
 }
