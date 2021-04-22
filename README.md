@@ -1,4 +1,4 @@
-Solutions for adventofcode.com
+Solutions for [Advent of Code](adventofcode.com)
 
 For me, Advent of Code is an opportunity to
 
