@@ -1,0 +1,98 @@
+;;; I kicked off the un-optimized program
+;;; immediately after finishing part 1.
+;;;
+;;; It beat me. Winning time: 26 minutes.
+;;;
+;;; Still, for posterity, see the below.
+;;; I suppose it built character, or something.
+
+         ; a = 12;
+cpy a b  ; b = a;
+dec b    ; b--;
+         ; TOP: {
+cpy a d  ; d = a;
+         ;
+         ; // 1: b=11 d=12
+         ; // 2: b=10 d=12*11
+         ; // 3: b=9, d=12*11*10
+         ; // ...
+         ;
+
+         ; // a & c are immediately cleared
+         ;
+         ; /*
+cpy 0 a  ; a = 0;
+         ; do {
+cpy b c  ;     c = b;
+         ;     do {
+inc a    ;         a++;
+dec c    ;         c--;
+jnz c -2 ;     } while(c);
+dec d    ;     d--;
+jnz d -5 ; } while (d);
+         ; */
+         ; /*
+         ; a = 0;
+         ; do {
+         ;     a += b;
+         ;     c = 0;
+         ;     d--;
+         ; } while (d);
+         ; */
+         ;
+         ; a = (b * d); // 12*11, 12*11*10,
+         ; c = 0;
+         ; d = 0;
+dec b    ; b--; // 10, 9
+
+         ; /*
+cpy b c  ; c = b;
+cpy c d  ; d = c;
+         ; do {
+dec d    ;     d--;
+inc c    ;     c++;
+jnz d -2 ; while (d);
+         ; */
+
+         ; c = 2*b; // 20, 18, ...
+         ; d = 0;
+
+         ; // 1: a=12*11, b=10, c=20
+         ; // 2: a=12*11*10, b=9, c=18
+         ; // ...
+         ; // 7: a=12*11*...*5, b=4, c=8
+         ; // 8: a=12*...*4, b=3, c=6
+         ; // 9: a=12*...*3, b=2, c=4
+         ; // 10: a=12!, b=1, c=2
+
+tgl c    ; // 1: tgl 20 (noop)
+         ; // 2: tgl 18 (noop)
+         ; // ...
+         ; // 7: tgl 8 (alters op not yet run)
+         ; // 8: tgl 6 (ditto)
+         ; // 9: tgl 4 (ditto)
+         ; // 10: tgl 2 (removes goto TOP)
+
+cpy -16 c; c = -16;
+
+; Removed after tgl 2 above
+; jnz 1 c  ; goto TOP;
+
+cpy 87 c
+
+; Now: a=12!, c=87, d=74 (b is irrelevant)
+cpy 74 d ; tgl 4 (was jnz)
+inc a
+dec d    ; tgl 6 (was inc)
+jnz d -2
+dec c    ; tgl 8 (was inc)
+jnz c -5
+
+; do {
+;     a+=74
+; while (--c)
+;
+; ==> a += 74*c
+; ==> a += 74*87
+; ==> a = 12! + 74*87
+; ==> a = 479008038
